@@ -378,6 +378,7 @@ H5_term_library(void)
     } while(pending && ntries++ < 100);
 
     if(pending) {
+        return; /* TODO remove when fixed */
         /* Only display the error message if the user is interested in them. */
         if(func) {
             fprintf(stderr, "HDF5: infinite loop closing library\n");
