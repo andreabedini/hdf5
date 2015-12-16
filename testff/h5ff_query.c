@@ -661,7 +661,7 @@ error:
 }
 
 static herr_t
-test_query_apply_view_multi(const char filenames[MULTI_NFILES][MAX_NAME], hid_t fapl,
+test_query_apply_view_multi(const char **filenames, hid_t fapl,
     unsigned idx_plugin, hid_t estack)
 {
     hid_t files[MULTI_NFILES] = {H5I_BADID, H5I_BADID, H5I_BADID};
@@ -753,8 +753,9 @@ main(int argc, char *argv[])
 #ifdef H5_HAVE_FASTBIT
     char filename_fastbit[MAX_NAME];
 #endif
-    char filename_multi[MULTI_NFILES][MAX_NAME];
+    char **filename_multi = NULL;
     hid_t query = H5I_BADID, fapl = H5I_BADID;
+    int i;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -771,9 +772,14 @@ main(int argc, char *argv[])
 #ifdef H5_HAVE_FASTBIT
     h5_fixname(FILENAME[1], fapl, filename_fastbit, sizeof(filename_fastbit));
 #endif
-    h5_fixname(FILENAME[2], fapl, filename_multi[0], sizeof(filename_multi[0]));
-    h5_fixname(FILENAME[3], fapl, filename_multi[1], sizeof(filename_multi[1]));
-    h5_fixname(FILENAME[4], fapl, filename_multi[2], sizeof(filename_multi[2]));
+    filename_multi = (char **) HDmalloc(MULTI_NFILES * sizeof(char *));
+    for (i = 0; i < MULTI_NFILES; i++) {
+        filename_multi[i] = (char *) HDmalloc(MAX_NAME);
+        HDmemset(filename_multi, '\0', MAX_NAME);
+    }
+    h5_fixname(FILENAME[2], fapl, filename_multi[0], MAX_NAME);
+    h5_fixname(FILENAME[3], fapl, filename_multi[1], MAX_NAME);
+    h5_fixname(FILENAME[4], fapl, filename_multi[2], MAX_NAME);
 
     /* Check that no object is left open */
     H5Pset_fclose_degree(fapl, H5F_CLOSE_SEMI);
@@ -829,6 +835,10 @@ main(int argc, char *argv[])
 
     puts("All query tests passed.");
     h5_cleanup(FILENAME, fapl);
+    for (i = 0; i < MULTI_NFILES; i++)
+        HDfree(filename_multi[i]);
+    HDfree(filename_multi);
+
     EFF_finalize();
     MPI_Finalize();
 
