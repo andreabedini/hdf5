@@ -455,7 +455,8 @@ error:
 
 /* Read region */
 static herr_t
-test_query_read_selection(hid_t file, hid_t fapl, hid_t view, H5R_type_t rtype, hid_t rcxt, hid_t estack)
+test_query_read_selection(size_t file_count, const char **filenames,
+        hid_t *files, hid_t fapl, hid_t view, H5R_type_t rtype, hid_t *rcxts, hid_t estack)
 {
     hid_t refs = H5I_BADID, ref_type = H5I_BADID, ref_space = H5I_BADID;
     size_t n_refs, ref_size, ref_buf_size;
@@ -497,13 +498,21 @@ test_query_read_selection(hid_t file, hid_t fapl, hid_t view, H5R_type_t rtype, 
         hid_t loc = H5I_BADID;
         hid_t loc_rcxt = H5I_BADID;
 
-        if (file == H5I_BADID) {
-            if (H5Rget_filename_ff(ref_ptr, filename, MAX_NAME) < 0) FAIL_STACK_ERROR;
-            printf("Found reference from file: %s\n", filename);
-            if ((loc = H5Fopen_ff(filename, H5F_ACC_RDONLY, fapl, &loc_rcxt, estack)) < 0) FAIL_STACK_ERROR;
+        if (H5Rget_filename_ff(ref_ptr, filename, MAX_NAME) < 0) FAIL_STACK_ERROR;
+        printf("Found reference from file: %s\n", filename);
+        if (file_count > 1) {
+            int j;
+            for (j = 0; j < file_count; j++) {
+                if (0 == HDstrcmp(filename, filenames[j])) {
+                    loc = files[j];
+                    loc_rcxt = rcxts[j];
+                    break;
+                }
+            }
         } else {
-            loc = file;
-            loc_rcxt = rcxt;
+            if (0 != HDstrcmp(filename, filenames[0])) FAIL_STACK_ERROR;
+            loc = files[0];
+            loc_rcxt = rcxts[0];
         }
         if ((obj = H5Rdereference_ff(loc, H5P_DEFAULT, ref_ptr, loc_rcxt, estack)) < 0) FAIL_STACK_ERROR;
         if (H5Iget_name(obj, obj_path, MAX_NAME) < 0) FAIL_STACK_ERROR;
@@ -539,21 +548,16 @@ test_query_read_selection(hid_t file, hid_t fapl, hid_t view, H5R_type_t rtype, 
             HDfree(buf);
             buf = NULL;
         }
-        if (rtype == H5R_ATTR) {
-            char attr_name[MAX_NAME];
-
-            if (H5Rget_name_ff(ref_ptr, attr_name, MAX_NAME) < 0) FAIL_STACK_ERROR;
-            printf("Attribute name: %s\n", attr_name);
-
-            if (H5Aclose_ff(obj, estack) < 0) FAIL_STACK_ERROR;
-        } else {
+//        if (rtype == H5R_ATTR) {
+//            char attr_name[MAX_NAME];
+//
+//            if (H5Rget_name_ff(ref_ptr, attr_name, MAX_NAME) < 0) FAIL_STACK_ERROR;
+//            printf("Attribute name: %s\n", attr_name);
+//
+//            if (H5Aclose_ff(obj, estack) < 0) FAIL_STACK_ERROR;
+//        } else {
             if (H5Dclose_ff(obj, estack) < 0) FAIL_STACK_ERROR;
-        }
-        if ((file == H5I_BADID) && (H5Fclose(loc) < 0)) FAIL_STACK_ERROR;
-        if (rcxt == H5I_BADID) {
-            if (H5RCrelease(loc_rcxt, estack) < 0) FAIL_STACK_ERROR;
-            if (H5RCclose(loc_rcxt) < 0) FAIL_STACK_ERROR;
-        }
+//        }
         ref_ptr = (href_ff_t *)((uint8_t *) ref_ptr + ref_size);
     }
 
@@ -611,7 +615,7 @@ test_query_apply_view(const char *filename, hid_t fapl, unsigned idx_plugin,
             + ((float) (t2.tv_usec - t1.tv_usec)) / 1000.0f);
 
     if (!(result & H5Q_REF_REG)) FAIL_STACK_ERROR;
-    if (test_query_read_selection(file, fapl, view, H5R_DATASET_REGION, rcxt, estack) < 0) FAIL_STACK_ERROR;
+    if (test_query_read_selection(1, &filename, &file, fapl, view, H5R_DATASET_REGION, &rcxt, estack) < 0) FAIL_STACK_ERROR;
 
     if (H5Gclose(view) < 0) FAIL_STACK_ERROR;
     if (test_query_close(query)) FAIL_STACK_ERROR;
@@ -624,7 +628,7 @@ test_query_apply_view(const char *filename, hid_t fapl, unsigned idx_plugin,
     if ((view = H5Qapply_ff(file, query, &result, H5P_DEFAULT, rcxt, estack)) < 0) FAIL_STACK_ERROR;
 
     if (!(result & H5Q_REF_OBJ)) FAIL_STACK_ERROR;
-    if (test_query_read_selection(file, fapl, view, H5R_OBJECT, rcxt, estack) < 0) FAIL_STACK_ERROR;
+    if (test_query_read_selection(1, &filename, &file, fapl, view, H5R_OBJECT, &rcxt, estack) < 0) FAIL_STACK_ERROR;
 
     if (H5Gclose(view) < 0) FAIL_STACK_ERROR;
     if (test_query_close(query)) FAIL_STACK_ERROR;
@@ -637,7 +641,7 @@ test_query_apply_view(const char *filename, hid_t fapl, unsigned idx_plugin,
     if ((view = H5Qapply_ff(file, query, &result, H5P_DEFAULT, rcxt, estack)) < 0) FAIL_STACK_ERROR;
 
     if (!(result & H5Q_REF_ATTR)) FAIL_STACK_ERROR;
-    if (test_query_read_selection(file, fapl, view, H5R_ATTR, rcxt, estack) < 0) FAIL_STACK_ERROR;
+    if (test_query_read_selection(1, &filename, &file, fapl, view, H5R_ATTR, &rcxt, estack) < 0) FAIL_STACK_ERROR;
 
     if (H5Gclose(view) < 0) FAIL_STACK_ERROR;
     if (test_query_close(query)) FAIL_STACK_ERROR;
@@ -657,7 +661,7 @@ error:
 }
 
 static herr_t
-test_query_apply_view_multi(const char filename[MULTI_NFILES][MAX_NAME], hid_t fapl,
+test_query_apply_view_multi(const char filenames[MULTI_NFILES][MAX_NAME], hid_t fapl,
     unsigned idx_plugin, hid_t estack)
 {
     hid_t files[MULTI_NFILES] = {H5I_BADID, H5I_BADID, H5I_BADID};
@@ -673,10 +677,10 @@ test_query_apply_view_multi(const char filename[MULTI_NFILES][MAX_NAME], hid_t f
     /* Create simple files for testing queries */
     for (i = 0; i < MULTI_NFILES; i++) {
         uint64_t req_version = 1;
-        printf("Creating test file \"%s\"\n", filename[i]);
-        if ((test_query_create_simple_file(filename[i], fapl, idx_plugin, req_version, estack)) < 0) FAIL_STACK_ERROR;
+        printf("Creating test file \"%s\"\n", filenames[i]);
+        if ((test_query_create_simple_file(filenames[i], fapl, idx_plugin, req_version, estack)) < 0) FAIL_STACK_ERROR;
         /* Open the file in read-only */
-        if ((files[i] = H5Fopen_ff(filename[i], H5F_ACC_RDONLY, fapl, &rcxts[i], estack)) < 0) FAIL_STACK_ERROR;
+        if ((files[i] = H5Fopen_ff(filenames[i], H5F_ACC_RDONLY, fapl, &rcxts[i], estack)) < 0) FAIL_STACK_ERROR;
     }
 
     printf("\nRegion query\n");
@@ -695,8 +699,9 @@ test_query_apply_view_multi(const char filename[MULTI_NFILES][MAX_NAME], hid_t f
             ((float) (t2.tv_sec - t1.tv_sec)) * 1000.0f
             + ((float) (t2.tv_usec - t1.tv_usec)) / 1000.0f);
 
+
     if (!(result & H5Q_REF_REG)) FAIL_STACK_ERROR;
-    if (test_query_read_selection(H5I_BADID, fapl, view, H5R_DATASET_REGION, H5I_BADID, estack) < 0) FAIL_STACK_ERROR;
+    if (test_query_read_selection(MULTI_NFILES, filenames, files, fapl, view, H5R_DATASET_REGION, rcxts, estack) < 0) FAIL_STACK_ERROR;
 
     if (H5Gclose(view) < 0) FAIL_STACK_ERROR;
     if (test_query_close(query)) FAIL_STACK_ERROR;
@@ -709,7 +714,7 @@ test_query_apply_view_multi(const char filename[MULTI_NFILES][MAX_NAME], hid_t f
     if ((view = H5Qapply_multi_ff(MULTI_NFILES, files, query, &result, H5P_DEFAULT, rcxts, estack)) < 0) FAIL_STACK_ERROR;
 
     if (!(result & H5Q_REF_OBJ)) FAIL_STACK_ERROR;
-    if (test_query_read_selection(H5I_BADID, fapl, view, H5R_OBJECT, H5I_BADID, estack) < 0) FAIL_STACK_ERROR;
+    if (test_query_read_selection(MULTI_NFILES, filenames, files, fapl, view, H5R_OBJECT, rcxts, estack) < 0) FAIL_STACK_ERROR;
 
     if (H5Gclose(view) < 0) FAIL_STACK_ERROR;
     if (test_query_close(query)) FAIL_STACK_ERROR;
@@ -722,7 +727,7 @@ test_query_apply_view_multi(const char filename[MULTI_NFILES][MAX_NAME], hid_t f
     if ((view = H5Qapply_multi_ff(MULTI_NFILES, files, query, &result, H5P_DEFAULT, rcxts, estack)) < 0) FAIL_STACK_ERROR;
 
     if (!(result & H5Q_REF_ATTR)) FAIL_STACK_ERROR;
-    if (test_query_read_selection(H5I_BADID, fapl, view, H5R_ATTR, H5I_BADID, estack) < 0) FAIL_STACK_ERROR;
+    if (test_query_read_selection(MULTI_NFILES, filenames, files, fapl, view, H5R_ATTR, rcxts, estack) < 0) FAIL_STACK_ERROR;
 
     if (H5Gclose(view) < 0) FAIL_STACK_ERROR;
     if (test_query_close(query)) FAIL_STACK_ERROR;
