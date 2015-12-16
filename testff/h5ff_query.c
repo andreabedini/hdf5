@@ -550,7 +550,7 @@ test_query_read_selection(hid_t file, hid_t fapl, hid_t view, H5R_type_t rtype, 
             if (H5Dclose_ff(obj, estack) < 0) FAIL_STACK_ERROR;
         }
         if ((file == H5I_BADID) && (H5Fclose(loc) < 0)) FAIL_STACK_ERROR;
-        if (!rcxt) {
+        if (rcxt == H5I_BADID) {
             if (H5RCrelease(loc_rcxt, estack) < 0) FAIL_STACK_ERROR;
             if (H5RCclose(loc_rcxt) < 0) FAIL_STACK_ERROR;
         }
@@ -696,7 +696,7 @@ test_query_apply_view_multi(const char filename[MULTI_NFILES][MAX_NAME], hid_t f
             + ((float) (t2.tv_usec - t1.tv_usec)) / 1000.0f);
 
     if (!(result & H5Q_REF_REG)) FAIL_STACK_ERROR;
-    if (test_query_read_selection(H5I_BADID, fapl, view, H5R_DATASET_REGION, NULL, estack) < 0) FAIL_STACK_ERROR;
+    if (test_query_read_selection(H5I_BADID, fapl, view, H5R_DATASET_REGION, H5I_BADID, estack) < 0) FAIL_STACK_ERROR;
 
     if (H5Gclose(view) < 0) FAIL_STACK_ERROR;
     if (test_query_close(query)) FAIL_STACK_ERROR;
@@ -709,7 +709,7 @@ test_query_apply_view_multi(const char filename[MULTI_NFILES][MAX_NAME], hid_t f
     if ((view = H5Qapply_multi_ff(MULTI_NFILES, files, query, &result, H5P_DEFAULT, rcxts, estack)) < 0) FAIL_STACK_ERROR;
 
     if (!(result & H5Q_REF_OBJ)) FAIL_STACK_ERROR;
-    if (test_query_read_selection(H5I_BADID, fapl, view, H5R_OBJECT, NULL, estack) < 0) FAIL_STACK_ERROR;
+    if (test_query_read_selection(H5I_BADID, fapl, view, H5R_OBJECT, H5I_BADID, estack) < 0) FAIL_STACK_ERROR;
 
     if (H5Gclose(view) < 0) FAIL_STACK_ERROR;
     if (test_query_close(query)) FAIL_STACK_ERROR;
@@ -722,7 +722,7 @@ test_query_apply_view_multi(const char filename[MULTI_NFILES][MAX_NAME], hid_t f
     if ((view = H5Qapply_multi_ff(MULTI_NFILES, files, query, &result, H5P_DEFAULT, rcxts, estack)) < 0) FAIL_STACK_ERROR;
 
     if (!(result & H5Q_REF_ATTR)) FAIL_STACK_ERROR;
-    if (test_query_read_selection(H5I_BADID, fapl, view, H5R_ATTR, NULL, estack) < 0) FAIL_STACK_ERROR;
+    if (test_query_read_selection(H5I_BADID, fapl, view, H5R_ATTR, H5I_BADID, estack) < 0) FAIL_STACK_ERROR;
 
     if (H5Gclose(view) < 0) FAIL_STACK_ERROR;
     if (test_query_close(query)) FAIL_STACK_ERROR;
