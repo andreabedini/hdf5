@@ -775,7 +775,7 @@ main(int argc, char *argv[])
     filename_multi = (char **) HDmalloc(MULTI_NFILES * sizeof(char *));
     for (i = 0; i < MULTI_NFILES; i++) {
         filename_multi[i] = (char *) HDmalloc(MAX_NAME);
-        HDmemset(filename_multi, '\0', MAX_NAME);
+        HDmemset(filename_multi[i], '\0', MAX_NAME);
     }
     h5_fixname(FILENAME[2], fapl, filename_multi[0], MAX_NAME);
     h5_fixname(FILENAME[3], fapl, filename_multi[1], MAX_NAME);
